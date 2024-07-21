@@ -264,7 +264,7 @@ class UserRequests(Resource):
 @user_api.route('/remove')
 class RemoveUser(Resource):
     @jwt_required(optional=True)
-    def get(self):
+    def post(self):
         user = db.session.get(users, get_jwt_identity())
 
         if (user):
