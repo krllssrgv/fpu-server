@@ -1,8 +1,4 @@
-# This Python file uses the following encoding: utf-8
-import os
-import sys
-
-from flask import Flask, request, send_from_directory, Blueprint, make_response
+from flask import Flask, request, Blueprint, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade, init, migrate
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies
@@ -21,7 +17,7 @@ from config import SECRET_KEY, JWT_SECRET_KEY, SQLALCHEMY_DATABASE_URI
 
 
 # App
-app = Flask(__name__, static_folder='build', static_url_path='')
+app = Flask(__name__)
 
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
@@ -367,17 +363,6 @@ api.add_namespace(user_api, path='/user')
 app.register_blueprint(api_bp)
 
 
-# Serve
-@app.route('/', defaults={'path': ''})
-@app.route('/<path>')
-def serve(path):
-    if (path != "") and (os.path.exists(os.path.join(app.static_folder, path))):
-        return send_from_directory(app.static_folder, path)
-    else:
-        return send_from_directory(app.static_folder, 'index.html')
-
-
-
 # BackgroundScheduler
 def update_weeks():
     with app.app_context():
@@ -396,7 +381,6 @@ def update_weeks():
 scheduler = BackgroundScheduler()
 scheduler.add_job(update_weeks, 'cron', day_of_week='mon', hour=1, minute=0)
 scheduler.start()
-
 
 
 if __name__ == '__main__':
