@@ -4,7 +4,7 @@ class Admin:
         self.password = password
 
     def check_admin(self, username, password):
-        return (self.password == password)
+        return ((self.username == username) and (self.password == password))
 
 
 AdminUser = Admin('AdminAmdin', 'nbyuJBY763BYin')
