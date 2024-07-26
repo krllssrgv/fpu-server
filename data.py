@@ -1,6 +1,3 @@
-from copy import copy
-
-
 class Data:
     straight = 'straight'
     narrow = 'narrow'

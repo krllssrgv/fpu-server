@@ -1,9 +1,15 @@
-from flask import Flask, request, Blueprint, make_response
+from flask import Flask, request, Blueprint, make_response, redirect, url_for, flash, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade, init, migrate
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies
 from flask_cors import CORS
 from flask_restx import Api, Resource, Namespace, fields
+from flask_admin import Admin, AdminIndexView, expose
+from flask_admin.contrib.sqla import ModelView
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired
+
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from datetime import timedelta
@@ -11,6 +17,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from check_user import send_email, create_code
 from data import Data
+from admin import AdminUser
 
 from config import SECRET_KEY, JWT_SECRET_KEY, SQLALCHEMY_DATABASE_URI
 
@@ -48,12 +55,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-@app.cli.command("init-db")
-def init_db():
-    init()
-    migrate()
-    upgrade()
-
 
 class users(db.Model):
     __tablename__ = 'users'
@@ -62,6 +63,7 @@ class users(db.Model):
     password = db.Column(db.String(30), nullable=False)
     name = db.Column(db.String(40), nullable=False)
     surname = db.Column(db.String(40), nullable=False)
+    admin = db.Column(db.Boolean, nullable=False, default=False)
 
     confirmed = db.Column(db.Boolean, default=False, nullable=False)
     check_code = db.Column(db.String(10), default='', nullable=False)
@@ -94,6 +96,29 @@ def check_if_token_in_blacklist(jwt_header, jwt_payload):
     jti = jwt_payload['jti']
     return jti in BLACKLIST
 
+
+# Admin Login
+class AdminLoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
+
+
+# Admin
+class MyAdminIndexView(AdminIndexView):
+    @expose('/')
+    @jwt_required()
+    def index(self):
+        return super(MyAdminIndexView, self).index()
+
+class MyModelView(ModelView):
+    @jwt_required()
+    def is_accessible(self):
+        return True
+    
+
+admin = Admin(app, name='Admin', template_mode='bootstrap3', index_view=MyAdminIndexView())
+admin.add_view(MyModelView(users, db.session))
 
 
 # User API
@@ -337,6 +362,24 @@ class Result(Resource):
                 return '', 400
         else:
             return '', 401 
+        
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    form = AdminLoginForm()
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+        
+        if (AdminUser.check_admin(username, password)):
+            access_token = create_access_token(identity=username)
+            response = make_response(redirect(url_for('admin.index')))
+            set_access_cookies(response, access_token)
+            return response
+        else:
+            flash('Invalid username or password')
+    
+    return render_template('login.html', form=form)
 
 
 # Register
