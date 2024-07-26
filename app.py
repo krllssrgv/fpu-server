@@ -60,7 +60,7 @@ class users(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(80), nullable=False)
-    password = db.Column(db.String(30), nullable=False)
+    password = db.Column(db.Text, nullable=False)
     name = db.Column(db.String(40), nullable=False)
     surname = db.Column(db.String(40), nullable=False)
     admin = db.Column(db.Boolean, nullable=False, default=False)
