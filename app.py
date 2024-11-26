@@ -1,15 +1,11 @@
-from flask import Flask, request, Blueprint, make_response, redirect, url_for, flash, render_template
+from flask import Flask, request, Blueprint, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, upgrade, init, migrate
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies
 from flask_cors import CORS
 from flask_restx import Api, Resource, Namespace, fields
-from flask_admin import Admin, AdminIndexView, expose
+from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired
-
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from datetime import timedelta
@@ -17,8 +13,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from check_user import send_email, create_code
 from data import Data
-from admin import AdminUser
-
 from config import SECRET_KEY, JWT_SECRET_KEY, SQLALCHEMY_DATABASE_URI
 
 
@@ -29,10 +23,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
-app.config['JWT_COOKIE_CSRF_PROTECT'] = True
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=15)
-app.config['JWT_BLACKLIST_ENABLED'] = True
-app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access']
 app.config['JWT_COOKIE_SAMESITE'] = 'None'
 app.config['JWT_COOKIE_SECURE'] = True
 app.config['JWT_COOKIE_CSRF_PROTECT'] = False
@@ -88,37 +79,10 @@ user_confirm_model = user_api.model('user_login', {
     'code': fields.String(required=True, description='Code'),
 })
 
-
-BLACKLIST = set()
-
-@jwt.token_in_blocklist_loader
-def check_if_token_in_blacklist(jwt_header, jwt_payload):
-    jti = jwt_payload['jti']
-    return jti in BLACKLIST
-
-
-# Admin Login
-class AdminLoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    submit = SubmitField('Login')
-
-
-# Admin
-class MyAdminIndexView(AdminIndexView):
-    @expose('/')
-    @jwt_required()
-    def index(self):
-        return super(MyAdminIndexView, self).index()
-
-class MyModelView(ModelView):
-    @jwt_required()
-    def is_accessible(self):
-        return True
     
 
-admin = Admin(app, name='Admin', template_mode='bootstrap3', index_view=MyAdminIndexView())
-admin.add_view(MyModelView(users, db.session))
+admin = Admin(app, name='Admin', template_mode='bootstrap3')
+admin.add_view(ModelView(users, db.session))
 
 
 # User API
@@ -187,8 +151,6 @@ class Logout(Resource):
         user = db.session.get(users, get_jwt_identity())
 
         if (user):
-            jti = get_jwt()['jti']
-            BLACKLIST.add(jti)
             response = make_response()
             unset_jwt_cookies(response)
             return response
@@ -296,8 +258,6 @@ class RemoveUser(Resource):
             try:
                 db.session.delete(user)
                 db.session.commit()
-                jti = get_jwt()['jti']
-                BLACKLIST.add(jti)
                 response = make_response()
                 unset_jwt_cookies(response)
                 return response
@@ -363,23 +323,6 @@ class Result(Resource):
         else:
             return '', 401 
         
-
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    form = AdminLoginForm()
-    if form.validate_on_submit():
-        username = form.username.data
-        password = form.password.data
-        
-        if (AdminUser.check_admin(username, password)):
-            access_token = create_access_token(identity=username)
-            response = make_response(redirect(url_for('admin.index')))
-            set_access_cookies(response, access_token)
-            return response
-        else:
-            flash('Invalid username or password')
-    
-    return render_template('login.html', form=form)
 
 
 # Register
