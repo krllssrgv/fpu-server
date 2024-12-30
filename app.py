@@ -1,7 +1,6 @@
 from flask import Flask, request, Blueprint, make_response
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate, upgrade, init, migrate
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, get_jwt, set_access_cookies, unset_jwt_cookies
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 from flask_cors import CORS
 from flask_restx import Api, Resource, Namespace, fields
 from flask_admin import Admin
@@ -44,7 +43,6 @@ act_api = Namespace('act')
 # DataBase
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 
 
 class users(db.Model):
