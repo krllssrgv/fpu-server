@@ -147,44 +147,6 @@ class Logout(Resource):
             return '', 401
     
 
-@user_api.route('/check_login')
-class CheckLogin(Resource):
-    @jwt_required(optional=True)
-    def get(self):
-        user = db.session.get(users, get_jwt_identity())
-
-        if (user):
-            return '', 204
-        else:
-            return '', 401
-        
-
-@user_api.route('/confirm_email')
-class ConfirmEmail(Resource):
-    @jwt_required(optional=True)
-    @user_api.expect(user_confirm_model)
-    def post(self):
-        user = db.session.get(users, get_jwt_identity())
-
-        if (user):
-            if (not user.confirmed):
-                code = request.json['code']
-                if (code == user.check_code):
-                    user.check_code = ''
-                    user.confirmed = True
-                    try:
-                        db.session.commit()
-                        return '', 204
-                    except:
-                        return '', 500
-                else:
-                    return {'error': 'Неправильный код'}, 400
-            else:
-                return {'error': 'Почта уже подтверждена'}, 400
-        else:
-            return '', 401
-        
-
 @user_api.route('/user')
 class UserRequests(Resource):
     @jwt_required(optional=True)
