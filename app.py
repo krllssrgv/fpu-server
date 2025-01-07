@@ -178,7 +178,6 @@ class UserRequests(Resource):
                     'name': user.name,
                     'surname': user.surname,
                     'email': user.email,
-                    'confirmed': user.confirmed,
                     'progress': int((round(user.current_week / 14, 2)) * 100),
                     'success': user.success,
                     'current_week': user.current_week,
@@ -191,7 +190,6 @@ class UserRequests(Resource):
                     'name': user.name,
                     'surname': user.surname,
                     'email': user.email,
-                    'confirmed': user.confirmed,
                     'progress': 100,
                     'finish': True
                 }
