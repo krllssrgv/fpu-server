@@ -6,11 +6,8 @@ from flask_restx import Api, Resource, Namespace, fields
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from werkzeug.security import generate_password_hash, check_password_hash
-
 from datetime import timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
-
-from check_user import send_email, create_code
 from data import Data
 from config import SECRET_KEY, JWT_SECRET_KEY, SQLALCHEMY_DATABASE_URI
 
@@ -54,9 +51,6 @@ class users(db.Model):
     surname = db.Column(db.String(40), nullable=False)
     admin = db.Column(db.Boolean, nullable=False, default=False)
 
-    confirmed = db.Column(db.Boolean, default=False, nullable=False)
-    check_code = db.Column(db.String(10), default='', nullable=False)
-    
     current_week = db.Column(db.Integer, nullable=False, default=0)
     day_one = db.Column(db.Boolean, nullable=False, default=False)
     day_two = db.Column(db.Boolean, nullable=False, default=False)
@@ -105,18 +99,15 @@ class Register(Resource):
             result['repeatedPassword'] = 'Пароли не совпадают'
 
         if check:
-            code = create_code()
             new_user = users(
                 email=str(data['email']),
                 password=generate_password_hash(str(data['password'])),
                 name=str(data['name']),
                 surname=str(data['surname']),
-                check_code = code
             )
             try:
                 db.session.add(new_user)
                 db.session.commit()
-                print(send_email(str(data['email']), code))
                 return '', 204
             except:
                 return '', 500
